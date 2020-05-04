@@ -1,0 +1,208 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package filosofos;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ *
+ * @author Jaime Bermejo
+ */
+class Estados {
+
+    public boolean comiendo;
+    public boolean pensar;
+
+    public Estados(boolean comiendo, boolean pensar) {
+        this.comiendo = comiendo;
+        this.pensar = pensar;
+    }
+
+    public void comer() {
+
+    }
+
+    public void pensar() {
+
+    }
+
+    public synchronized void cogerPalillo(Palillo palillo1, Palillo palillo2) {
+        while (palillo1.isCogido() && palillo2.isCogido()) {
+            try {
+                wait();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        if (palillo1.isCogido() == false && palillo2.isCogido() == false) {
+            palillo1.setCogido(true);
+            System.out.println("He cogido el palillo " + palillo1.getNumero());
+
+        } else if (palillo1.isCogido() == false) {
+
+            palillo1.setCogido(true);
+            System.out.println("He cogido el palillo " + palillo1.getNumero());
+
+        } else {
+            palillo2.setCogido(true);
+            System.out.println("He cogido el palillo " + palillo2.getNumero());
+        }
+
+    }
+
+    public synchronized void soltarPalillo() {
+        notify();
+        notify();
+        System.out.println("Se sueltan los palillos.");
+    }
+
+}
+
+class Palillo {
+
+    public int numero;
+    public boolean cogido;
+
+    public Palillo(int numero, boolean cogido) {
+        this.numero = numero;
+        this.cogido = cogido;
+    }
+
+    public Palillo() {
+    }
+
+    public void setNumero(int numero) {
+        this.numero = numero;
+    }
+
+    public int getNumero() {
+        return numero;
+    }
+
+    public boolean isCogido() {
+        return cogido;
+    }
+
+    public void setCogido(boolean cogido) {
+        this.cogido = cogido;
+    }
+
+}
+
+class Filosofo implements Runnable {
+
+    public String nombre;
+    public Estados estado;
+    public int numPalillos;
+    public Palillo palillo1;
+    public Palillo palillo2;
+
+    public Filosofo(String nombre, Estados estado, Palillo palillo1, Palillo palillo2) {
+        this.nombre = nombre;
+        this.estado = estado;
+        this.palillo1 = palillo1;
+        this.palillo2 = palillo2;
+        this.numPalillos = 0;
+
+    }
+
+    public Filosofo() {
+
+    }
+
+    public Palillo getPalillo1() {
+        return palillo1;
+    }
+
+    public Palillo getPalillo2() {
+        return palillo2;
+    }
+
+    public void setPalillo1(Palillo palillo1) {
+        this.palillo1 = palillo1;
+    }
+
+    public void setPalillo2(Palillo palillo2) {
+        this.palillo2 = palillo2;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public Estados getEstado() {
+        return estado;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public void setEstado(Estados estado) {
+        this.estado = estado;
+    }
+
+    public int getnumPalillos() {
+        return numPalillos;
+    }
+
+    public void setnumPalillos(int numPalillos) {
+        this.numPalillos = numPalillos;
+    }
+
+    @Override
+    public void run() {
+        if (this.numPalillos != 2) {
+            this.estado.cogerPalillo(this.palillo1, this.palillo2);
+            this.numPalillos++;
+            System.out.println("Soy " + this.getNombre() + " y tengo " + this.getnumPalillos() + " palillos");
+        } else {
+            System.out.println("que buenos estan estos noodles");
+            this.estado.soltarPalillo();
+
+            //estado.cogerPalillo(palillo[0], palillo[1]);
+        }
+
+    }
+}
+
+public class Filosof {
+
+    static int NUM = 5;
+
+    public static void main(String[] args) {
+        Palillo palillo[];
+        palillo = new Palillo[NUM];
+
+        for (int i = 0; i < NUM; i++) {
+            palillo[i] = new Palillo(i, false);
+        }
+        System.out.println("\nPalillos puestos sobre la mesa.\n");
+        // Thread filosofo 
+        Estados estado = new Estados(false, true);//Estado inicial pensando y no comiendo
+        String nombres[] = {"Platón", "Locke", "Marx", "Tino", "René"};
+        for (int i = 0; i < NUM; i++) {
+            System.out.println("i:" + i);
+            if (i == 4) {
+
+                Thread filosofo = new Thread(new Filosofo(nombres[i], estado, palillo[i], palillo[(i + 1) % NUM]));
+                System.out.println(nombres[i] + " está sentado a la mesa y comienza a pensar. Tiene el palillo" + palillo[i].getNumero() + " "
+                        + "" + palillo[1].isCogido() + " y el otro palillo" + palillo[(i + 1) % NUM].getNumero() + " " + palillo[(i + 1) % NUM].isCogido());
+
+                filosofo.start();
+            } else {
+
+                Thread filosofo = new Thread(new Filosofo(nombres[i], estado, palillo[i], palillo[i + 1]));
+                System.out.println(nombres[i] + " está sentado a la mesa y comienza a pensar. Tiene el palillo" + palillo[i].getNumero() + " "
+                        + "" + palillo[i].isCogido() + " y el otro palillo" + palillo[i + 1].getNumero() + " " + palillo[i + 1].isCogido());
+                filosofo.start();
+            }
+
+        }
+    }
+}
