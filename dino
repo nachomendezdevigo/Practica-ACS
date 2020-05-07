@@ -1,0 +1,139 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <semaphore.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <math.h>
+#define TUR_SIZE 4
+#define MAX_TAR 24
+
+int car[TUR_SIZE];
+int counter = 0;
+int counter2 = 0;
+sem_t num_asient;
+sem_t pito;
+sem_t rugido;
+sem_t cocheLleno;
+sem_t bajar;
+
+/*void *generar(void *args)
+{
+    while (counter < MAX_TAR)
+    {
+        int num_ale = (int)(rand() % (MAX_TAR - counter));
+        printf("Acaban de llegar %i turistas", num_ale);
+        printf("Hay %i que todavía no han disfrutado del Dino.", MAX_TAR-counter);
+        arrancar();
+        counter + num_ale;
+    }
+}*/
+
+void turista_vive(void* experience){
+   sem_wait(&num_asient);
+   counter++;
+   if(counter==4){
+     sem_post(&cocheLleno);
+   }
+
+}
+void coche_arranca(){
+    printf("Rumbo hacia el Dinosaurio T-Rex al que voy a tocar las narices con el pito.\n");
+    printf("bruuuumm bruuuumm\n");
+    sleep(0.5);
+    printf("Hemos llegado.\n");
+    printf("3,14159265\n");
+    sem_post(&pito);
+    sem_wait(&rugido);
+    printf("OHHH QUE MONOOO!!!\n");
+    sleep(0.5);
+    printf("gracias por su visita \n");
+     for(int i=0;i<TUR_SIZE;i++){
+  sem_post(&bajar);
+  }
+    counter=0;
+
+}
+void rugir(){
+
+    printf("Miauuuuuuuuu, Miaauuuuuu\n");
+    sem_post(&rugido);
+
+
+}
+
+
+
+
+void* montarEnElCoche(void * args){
+  sem_wait(&num_asient);
+  printf("Un turista ha montado en el coche.\n");
+  counter++;
+  if(counter==4){
+  sem_post(&cocheLleno);
+
+	}
+	sem_wait(&bajar);
+  counter2++;
+  printf("Un turista se baja del coche y se va.\n");
+  if(counter2==4){
+    for(int i=0;i<TUR_SIZE;i++){
+      sem_post(&num_asient);
+      counter2=0;
+    }
+  }
+  pthread_exit(0);
+  return 0;
+}
+
+
+void* cicloCoche(void* args){
+		for( int j=0;j<(MAX_TAR/TUR_SIZE);j++){
+  sem_wait(&cocheLleno);
+  coche_arranca();}
+  pthread_exit(0);
+}
+void* cicloDino(void* args){
+
+		for( int j=0;j<(MAX_TAR/TUR_SIZE);j++){
+        sem_wait(&pito);
+        rugir();}
+  pthread_exit(0);
+}
+
+int main(int argc, char const *argv[])
+{
+    pthread_t turista[MAX_TAR];
+    pthread_t dino;
+    pthread_t coche;
+
+    sem_init(&num_asient, 0, TUR_SIZE);
+    sem_init(&pito, 0, 0);
+    sem_init(&rugido,0, 0);
+    sem_init(&cocheLleno,0, 0);
+  	sem_init(&bajar,0, 0);
+
+    for (int i = 0; i < MAX_TAR; i++)
+    {
+        pthread_create(&turista[i],NULL,montarEnElCoche,(void*) 0l);
+    }
+    //pthread_create(&coche, NULL, coche_arranca, (void*) 0l);
+    //pthread_create(&generador, NULL, generar, (void *)0l);
+
+      pthread_create(&dino, NULL, cicloDino, (void*) 0l);
+    	pthread_create(&coche, NULL, cicloCoche, (void*) 0l);
+
+     for (int i = 0; i < MAX_TAR; i++)
+    {
+        pthread_join(turista[i],NULL);
+
+    }
+
+    	pthread_join(coche, NULL);
+    	pthread_join(dino, NULL);
+
+    sem_destroy(&rugido);
+    sem_destroy(&pito);
+    sem_destroy(&cocheLleno);
+    sem_destroy(&num_asient);
+
+}
