@@ -1,0 +1,92 @@
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdlib.h>
+
+
+#define NB_Clientes 10
+int sofas=5;
+int counter=0;
+
+int ClientesQueyaSeVan=NB_Clientes;
+pthread_mutex_t modificarSofa;
+pthread_mutex_t modificarContador;
+
+sem_t silla;
+sem_t terminao;
+sem_t sentadoEnSilla;
+void sentarme(int i){
+  if(sofas>0){
+  pthread_mutex_lock(&modificarSofa);
+    sofas--;
+  pthread_mutex_unlock(&modificarSofa);
+  printf("Soy el costumer %d de momento me siento en el sofa \n",i);
+  sem_wait(&silla);
+  printf("me he sentado en la silla jeje soy el costumer %d\n",i);
+
+  sem_wait(&terminao);
+  printf("me mola mi nuevo pelo, adios soy el costumer %d\n",i);
+  sem_post(&silla);
+  sem_post(&sentadoEnSilla);
+
+  pthread_mutex_lock(&modificarSofa);
+  sofas++;
+  pthread_mutex_unlock(&modificarSofa);
+
+  }else{
+  printf("a esperar al metro, me piro soy el costumer %d\n",i);
+
+}
+  ClientesQueyaSeVan--;
+
+  }
+  void* cicloCLiente(void* args){
+    pthread_mutex_lock(&modificarContador);
+    counter++;
+    pthread_mutex_unlock(&modificarContador);
+    sentarme(counter);
+
+
+    pthread_exit(0);
+    }
+
+
+  void* cortarPelo(void* args){
+    while(ClientesQueyaSeVan>0){
+      sem_wait(&sentadoEnSilla);
+      printf("preparate para que tu pelo sea lo mejor que has visto en tu vida\n");
+      sleep(0.125);//lo que tarda el peluquero
+      sem_post(&terminao);
+
+    }
+      printf("ya he terminao\n");
+      pthread_exit(0);
+    }
+
+ int main(int argc, char const *argv[]) {
+  pthread_t cliente[NB_Clientes];
+  pthread_t barberPatrick;
+
+  sem_init(&silla,0,1);
+  sem_init(&terminao,0,0);
+  sem_init(&sentadoEnSilla,0,1);
+  pthread_mutex_init(&modificarSofa,NULL);
+  pthread_mutex_init(&modificarContador,NULL);
+
+
+  for(int i=0;i<NB_Clientes;i++){
+      pthread_create(&cliente[i], NULL,cicloCLiente, (void*) 0l );
+  }
+  pthread_create(&barberPatrick, NULL,cortarPelo, (void*) 0l );
+  for(int i=0;i<NB_Clientes;i++){
+      pthread_join(cliente[i], NULL);
+
+  }
+  sem_destroy(&silla);
+  sem_destroy(&sentadoEnSilla);
+  sem_destroy(&terminao);
+  return 0;
+}
