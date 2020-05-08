@@ -1,0 +1,124 @@
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdlib.h>
+
+
+#define NB_Clientes 30
+#define  NB_sofas 5
+#define NB_Becarios 2
+
+int counter=0;
+int barra=15;
+int ClientesQueyaSeVan=NB_Clientes;
+pthread_mutex_t modificarBarra;
+pthread_mutex_t modificarContador;
+
+sem_t silla;
+sem_t sofas;
+sem_t terminao;
+sem_t sentadoEnSilla;
+void sentarme(int i){
+  if(barra>0){
+  pthread_mutex_lock(&modificarBarra);
+    barra--;
+  pthread_mutex_unlock(&modificarBarra);
+  printf("Soy el costumer %d de momento me voy a la barra \n",i);
+  sem_wait(&sofas);
+  printf("Soy el costumer %d  como hay sofas libres me voy al sofa \n",i);
+  pthread_mutex_lock(&modificarBarra);
+  barra++;
+  pthread_mutex_unlock(&modificarBarra);
+  sem_wait(&silla);
+  sem_post(&sofas);
+  printf("me he sentado en la silla jeje soy el costumer %d\n",i);
+
+  sem_wait(&terminao);
+  printf("me mola mi nuevo pelo, adios soy el costumer %d\n",i);
+  sem_post(&silla);
+  sem_post(&sentadoEnSilla);
+
+  }else{
+  printf("a esperar al metro, me piro soy el costumer %d\n",i);
+
+}
+  ClientesQueyaSeVan--;
+
+  }
+  void* cicloCLiente(void* args){
+    pthread_mutex_lock(&modificarContador);
+    counter++;
+    pthread_mutex_unlock(&modificarContador);
+    sentarme(counter);
+
+
+    pthread_exit(0);
+    }
+
+
+  void* cortarPelo(void* args){
+    while(ClientesQueyaSeVan>0){
+      sem_wait(&sentadoEnSilla);
+      printf("preparate para que tu pelo sea lo mejor que has visto en tu vida\n");
+      sleep(0.125);//lo que tarda el peluquero
+      sem_post(&terminao);
+
+    }
+      printf("ya he terminao\n");
+
+      pthread_exit(0);
+    }
+
+  void* cortarPeloBecario(void* args){
+      while(ClientesQueyaSeVan>2){//a los dos ultimos le va a cortar el pelo patrick
+        sem_wait(&sentadoEnSilla);
+        printf("no me denuncies x como te voy a cortar el pelo porfa\n");
+        sleep(0.5);//lo que tarda el becario
+        sem_post(&terminao);
+
+      }
+        printf("ya he terminao soy un becario\n");
+
+        pthread_exit(0);
+      }
+
+ int main(int argc, char const *argv[]) {
+  pthread_t cliente[NB_Clientes];
+  pthread_t becarios[NB_Becarios];
+  pthread_t barberPatrick;
+
+  sem_init(&silla,0,3);
+  sem_init(&terminao,0,0);
+  sem_init(&sentadoEnSilla,0,1);
+  sem_init(&sofas,0,NB_sofas);
+  pthread_mutex_init(&modificarBarra,NULL);
+  pthread_mutex_init(&modificarContador,NULL);
+
+
+  for(int i=0;i<NB_Clientes;i++){
+      pthread_create(&cliente[i], NULL,cicloCLiente, (void*) 0l );
+  }
+  pthread_create(&barberPatrick, NULL,cortarPelo, (void*) 0l );
+  for(int i=0;i<NB_Becarios;i++){
+      pthread_create(&becarios[i], NULL,cortarPeloBecario, (void*) 0l );
+  }
+  for(int i=0;i<NB_Clientes;i++){
+      pthread_join(cliente[i], NULL);
+
+  }
+  for(int i=0;i<NB_Becarios;i++){
+      pthread_join(becarios[i], NULL);
+
+  }
+  pthread_join(barberPatrick, NULL);
+
+  sem_destroy(&silla);
+  sem_destroy(&sentadoEnSilla);
+  sem_destroy(&terminao);
+  sem_destroy(&sofas);
+  return 0;
+}
